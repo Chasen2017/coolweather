@@ -4,10 +4,15 @@ import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Build;
 import android.preference.PreferenceManager;
+import android.support.v4.view.GravityCompat;
+import android.support.v4.widget.DrawerLayout;
+import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
@@ -22,10 +27,9 @@ import com.chasen.coolweather.util.Utility;
 
 import java.io.IOException;
 
-import javax.microedition.khronos.opengles.GL;
-
 import butterknife.BindView;
 import butterknife.ButterKnife;
+import butterknife.OnClick;
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.Response;
@@ -68,6 +72,13 @@ public class WeatherActivity extends AppCompatActivity {
     @BindView(R.id.bing_pic_img)
     ImageView bingPicImg;
 
+    @BindView(R.id.swipe_refresh)
+    SwipeRefreshLayout swipeRefreshLayout;
+
+    @BindView(R.id.drawer_layout)
+    DrawerLayout drawerLayout;
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -80,13 +91,16 @@ public class WeatherActivity extends AppCompatActivity {
         ButterKnife.bind(this);
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
         String weatherString = prefs.getString("weather", null);
+
+        final String weatherId;
         if (weatherString != null) {
             // 有缓存时直接解析天气数据
             Weather weather = Utility.handleWeatherResponse(weatherString);
+            weatherId = weather.basic.weatherId;
             showWeatherInfo(weather);
         } else {
             // 无缓存时去服务器查询天气
-            String weatherId = getIntent().getStringExtra("weather_id");
+            weatherId = getIntent().getStringExtra("weather_id");
             weatherLayout.setVisibility(View.INVISIBLE);
             requestWeather(weatherId);
         }
@@ -98,7 +112,21 @@ public class WeatherActivity extends AppCompatActivity {
             loadBingPic();
         }
 
+        swipeRefreshLayout.setColorSchemeResources(R.color.colorPrimary);
+        swipeRefreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
+            @Override
+            public void onRefresh() {
+                requestWeather(weatherId);
+            }
+        });
+
     }
+
+    @OnClick(R.id.nav_button)
+    void onNavBtnClick() {
+        drawerLayout.openDrawer(GravityCompat.START);
+    }
+
 
     /**
      * 加载必应每日一图
@@ -131,7 +159,7 @@ public class WeatherActivity extends AppCompatActivity {
     /**
      * 根据天气id请求城市天气信息
      */
-    private void requestWeather(final String weatherId) {
+    public void requestWeather(final String weatherId) {
         String weatherUrl = "http://guolin.tech/api/weather?cityid=" +weatherId + "&key=5d107ad1890e48b697be839367c3c6a8";
         HttpUtil.sendOkHeepRequest(weatherUrl, new Callback() {
             @Override
@@ -141,6 +169,7 @@ public class WeatherActivity extends AppCompatActivity {
                     @Override
                     public void run() {
                         Toast.makeText(WeatherActivity.this, "获取天气信息失败", Toast.LENGTH_SHORT).show();
+                        swipeRefreshLayout.setRefreshing(false);
                     }
                 });
             }
@@ -159,8 +188,8 @@ public class WeatherActivity extends AppCompatActivity {
                             showWeatherInfo(weather);
                         } else {
                             Toast.makeText(WeatherActivity.this, "获取天气信息失败", Toast.LENGTH_SHORT).show();
-
                         }
+                        swipeRefreshLayout.setRefreshing(false);
                     }
                 });
             }
@@ -183,16 +212,16 @@ public class WeatherActivity extends AppCompatActivity {
         degreeText.setText(degree);
         weatherInfoText.setText(weatherInfo);
         forecastLayout.removeAllViews();
-        for(Forecast forecase : weather.forecaseList) {
+        for(Forecast forecast : weather.forecaseList) {
             View view = LayoutInflater.from(this).inflate(R.layout.forecast_item, forecastLayout, false);
             TextView dateText = view.findViewById(R.id.date_text);
             TextView infoText = view.findViewById(R.id.info_text);
             TextView maxText = view.findViewById(R.id.max_text);
             TextView minText = view.findViewById(R.id.min_text);
-            dateText.setText(forecase.date);
-            infoText.setText(forecase.more.info);
-            maxText.setText(forecase.temperature.max);
-            minText.setText(forecase.temperature.min);
+            dateText.setText(forecast.date);
+            infoText.setText(forecast.more.info);
+            maxText.setText(forecast.temperature.max);
+            minText.setText(forecast.temperature.min);
             forecastLayout.addView(view);
         }
 
