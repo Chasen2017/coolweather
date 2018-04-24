@@ -1,6 +1,7 @@
 package com.chasen.coolweather;
 
 import android.app.ProgressDialog;
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
@@ -90,13 +91,19 @@ public class ChooseAreaFragment extends Fragment {
     }
 
     @OnItemClick(R.id.list_view)
-    void onListViewItemClick(int positon) {
+    void onListViewItemClick(int position) {
         if (currentLevel == LEVEL_PROVINCE) {
-            selectedProvince = provinceList.get(positon);
+            selectedProvince = provinceList.get(position);
             queryCities();
         } else if (currentLevel == LEVEL_CITY) {
-            selectedCity = cityList.get(positon);
+            selectedCity = cityList.get(position);
             queryCounties();
+        } else if (currentLevel == LEVEL_COUNTY){
+            String weatherId = countyList.get(position).getWeatherId();
+            Intent intent = new Intent(getActivity(), WeatherActivity.class);
+            intent.putExtra("weather_id", weatherId);
+            startActivity(intent);
+            getActivity().finish();
         }
     }
 
